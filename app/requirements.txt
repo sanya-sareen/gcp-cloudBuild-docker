@@ -1,0 +1,2 @@
+flask
+gunicorn  # Production-ready WSGI server
