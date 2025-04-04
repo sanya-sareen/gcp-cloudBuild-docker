@@ -4,13 +4,13 @@ steps:
     args: [
             'build',
             '-t',
-            'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo:${SHORT_SHA}',
+            'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA}',
             './app'   #  Change '.' to './app'
           ]
 
   # Push the Docker image to Google Artifact Registry (GAR)
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push',  'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo:${SHORT_SHA}']
+    args: ['push',  'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA}']
 
 options:
   logging: NONE
