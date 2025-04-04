@@ -10,7 +10,7 @@ COPY app.py requirements.txt /app/
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Expose port 5000
+# Expose port 8000
 EXPOSE 8000
 
 # Run the application
