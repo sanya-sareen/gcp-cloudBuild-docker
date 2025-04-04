@@ -1,16 +1,38 @@
 steps:
-  #  Build the Docker image (use `./app` as context)
   - name: 'gcr.io/cloud-builders/docker'
-    args: [
-            'build',
-            '-t',
-            'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA}',
-            './app'   #  Change '.' to './app'
-          ]
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        echo " Starting build for ${SHORT_SHA}..."
+        if docker build -t us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA} ./app; then
+          echo " Build succeeded. Tagging image..."
+          
+          # Tag as latest
+          docker tag us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA} \
+                     us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest
 
-  # Push the Docker image to Google Artifact Registry (GAR)
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push',  'us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA}']
+          # Retag previous latest as previous
+          docker pull us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest || echo "No previous latest image found."
+          docker tag us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest \
+                     us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:previous || echo "No latest to retag as previous."
+
+          echo " Pushing tags..."
+          docker push us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:${SHORT_SHA}
+          docker push us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest
+          docker push us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:previous || echo "No previous tag to push."
+
+        else
+          echo " Build failed. Reverting to previous image..."
+
+          # Pull and re-push previous image as latest
+          docker pull us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:previous || exit 1
+          docker tag us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:previous \
+                     us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest
+          docker push us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app:latest
+
+          echo " Build failed, rolled back to previous image."
+        fi
 
 options:
-  logging: NONE
+  logging: CLOUD_LOGGING_ONLY
