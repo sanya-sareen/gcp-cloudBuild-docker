@@ -1,0 +1,31 @@
+
+build-and-push:
+  image: google/cloud-sdk:slim
+  services:
+    - docker:20.10.24-dind
+  variables:
+    IMAGE_NAME: "us-central1-docker.pkg.dev/commanding-fact-455705-p5/python-repo/app"
+    DOCKER_HOST: tcp://docker:2375/
+    DOCKER_TLS_CERTDIR: ""
+  before_script:
+    - echo "$gcp_service_account" | base64 -d > creds/gcp_service_account.json
+    - gcloud auth activate-service-account --key-file=creds/gcp_service_account.json
+    - gcloud config set project commanding-fact-455705-p5
+    - gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+  script:
+    - |
+      echo "Starting Docker build for $CI_COMMIT_SHORT_SHA..."
+      if docker build -t $IMAGE_NAME:$CI_COMMIT_SHORT_SHA ./app; then
+        echo "Build successful. Tagging and pushing..."
+        docker tag $IMAGE_NAME:$CI_COMMIT_SHORT_SHA $IMAGE_NAME:latest
+        docker tag $IMAGE_NAME:latest $IMAGE_NAME:previous || echo "No existing latest tag to back up."
+        docker push $IMAGE_NAME:$CI_COMMIT_SHORT_SHA
+        docker push $IMAGE_NAME:latest
+        docker push $IMAGE_NAME:previous || echo "No previous tag to push."
+      else
+        echo "Build failed. Rolling back to previous image..."
+        docker pull $IMAGE_NAME:previous || exit 1
+        docker tag $IMAGE_NAME:previous $IMAGE_NAME:latest
+        docker push $IMAGE_NAME:latest
+        echo "Rollback complete. Previous image set as latest."
+      fi
